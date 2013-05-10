@@ -1,0 +1,100 @@
+<html>
+<body>
+<table>
+<tr><td>Equacao:</td><td><input type="text" name="eq" id="eq" /></td></tr>
+<tr><td>Variaveis:</td><td>
+<textarea id="vars" name="vars">
+</textarea></td></tr>
+<tr><td><input type="button" value="Calcular" onclick="calculate();"/></td></tr>
+</table>
+<div id="resultado" name="resultado">
+</div>
+<script type="text/javascript">
+
+function getVars()
+{
+	var vars = document.getElementById("vars").value.split("\n");
+
+	var values = {};
+	var length = vars.length;
+	for( var i = 0; i < length; i++ )
+	{
+		var eq = vars[i].replace(" ", "").split("=");
+		values[eq[0]] = {};
+		var other = eq[1].replace(" ", "").split("+-");
+		values[eq[0]]['m'] = parseFloat(other[0]);
+		values[eq[0]]['i'] = parseFloat(other[1]);
+	}
+	return values;
+}
+
+function getMax( obj )
+{
+	return obj.m + obj.i;
+}
+
+function getMin( obj )
+{
+	return obj.m - obj.i;
+}
+
+function calculate()
+{
+	var values = getVars();
+	var eq = document.getElementById("eq").value;
+	
+	var res = getResult(eq, values);
+	document.getElementById("resultado").innerHTML = res;
+}
+
+function getResult( eq, values )
+{
+	var eqV = eq.split("/");
+	if( eqV.length == 1 )
+	{
+	// great!! no division!!
+		var max = eqV[0];
+		var min = eqV[0];
+	
+		for( var key in values ) 
+		{
+			max = max.replace( key, getMax( values[key] ) );
+			min = min.replace( key, getMin( values[key] ) );
+		}
+	}
+	else
+	{
+		var max_up = eqV[0];
+		var min_up = eqV[0];
+		var max_down = eqV[1];
+		var min_down = eqV[1];
+		var max, min;
+	
+		for( var key in values )
+		{
+			max_up = max_up.replace( key, getMax( values[key] ) );
+		
+			min_up = min_up.replace( key, getMin( values[key] ) );
+		
+			max_down = max_down.replace( key, getMax( values[key] ) );
+		
+			min_down = min_down.replace( key, getMin( values[key] ) );
+		}
+		max = eval( "(" + max_up + ") / (" + min_down + ")" );
+		min = eval( "(" + min_up + ") / (" + max_down + ")" );
+	}
+
+	incerteza = eval( "(" + max + ") - (" + min + ")" ) / ( 2 * Math.sqrt(3) );
+
+	var modulo = eq;
+
+	for( var key in values )
+	{
+		modulo = modulo.replace( key, values[key]['m'] );
+	}
+
+	modulo = eval( modulo );
+
+	return modulo + "  +-  " + incerteza;
+}
+</script>
