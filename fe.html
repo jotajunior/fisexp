@@ -84,17 +84,43 @@ function getResult( eq, values )
 		min = eval( "(" + min_up + ") / (" + max_down + ")" );
 	}
 
-	incerteza = eval( "(" + max + ") - (" + min + ")" ) / ( 2 * Math.sqrt(3) );
-
+	incerteza = eval( "(" + max + ") - (" + min + ")" ) / ( 2 * Math.sqrt(3) ); // calculate
+	incerteza = formatToOneSignificant( incerteza );
+	
+	
 	var modulo = eq;
 
 	for( var key in values )
-	{
 		modulo = modulo.replace( key, values[key]['m'] );
-	}
 
 	modulo = eval( modulo );
-
+	modulo = formatAccordingToErrorRange( modulo, incerteza );
 	return modulo + "  +-  " + incerteza;
+}
+
+function formatToOneSignificant( incerteza )
+{
+	incerteza = incerteza.toPrecision(1) + ''; // parse to string, with precision
+	incerteza = eval(incerteza.replace("e+", "*10^").replace("e-","*10^(-1)*")); 
+	return incerteza;
+}
+
+function formatAccordingToErrorRange( average, error_range )
+{
+	var digits = getDigitsCount( error_range );
+	return digits == 0 ? Math.round( parseFloat(average) ) : average.toPrecision(digits);
+}
+	 
+function getDigitsCount( incerteza )
+{
+	var digits = incerteza + '';
+	digits = digits.split('.');
+	
+	if( digits.length == 1 )
+		digits = 0;
+	else
+		digits = digits[1].length;
+		
+	return digits;
 }
 </script>
