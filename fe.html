@@ -5,11 +5,59 @@
 <tr><td>Variaveis:</td><td>
 <textarea id="vars" name="vars">
 </textarea></td></tr>
-<tr><td><input type="button" value="Calcular" onclick="calculate();"/></td></tr>
+<tr><td><input type="radio" name="metodo" id="simple" value="simple" /> max - min / 2 raiz de 3<br />
+<input type="radio" name="metodo" id="complex" value="complex" checked /> derivadas</td><td><input type="button" value="Calcular" onclick="calculate();"/></td></tr>
 </table>
 <div id="resultado" name="resultado">
 </div>
 <script type="text/javascript">
+
+	
+function getTypeTwoResult(eq, values)
+{
+	var regex = new RegExp("^(.*?)\\*");
+	var a = regex.exec( eq );
+	a = a == null ? 1 : parseFloat( a[1] );
+	eq = eq.replace( '' + a + '*', "");
+	
+	var vars = eq.split("*");
+	var exps = {};
+	var varslength = vars.length;
+	
+	for( var i = 0; i < varslength; i++ )
+	{
+		if( vars[i] != '' )
+		{
+			var curr_coef = vars[i].split("^");
+			exps[curr_coef[0]] = curr_coef[1];
+		}
+	}
+	
+	var avg = calculateAverage( eq, values );
+	var sum = 0;
+
+	for( var key in values )
+	{
+		//alert( "key " + key + ": " + exps[key]  );
+		//alert("var " + key + ": " + values[key] );
+		sum += Math.pow(exps[key]*(values[key]['i']/values[key]['m']), 2);
+	}
+
+	return avg*Math.sqrt(sum);
+}
+
+function replacePowers( eq, values )
+{
+	for( var key in values )
+	{
+		var regex = new RegExp("(^|\\+|\\-|\\*|\\/)" + key + "\\^([-+]?[0-9]*\\.?[0-9]+)");
+		var powers = regex.exec(eq);
+		
+		if( powers != null )
+			eq = eq.replace( powers[0], powers[1] + "Math.pow("+key+","+powers[2]+")" );
+	}
+	return eq;
+}
 
 function getVars()
 {
@@ -38,21 +86,103 @@ function getMin( obj )
 	return obj.m - obj.i;
 }
 
-function calculate()
+function getEquationType( eq )
 {
-	var values = getVars();
-	var eq = document.getElementById("eq").value;
+	if( eq.search("\\+") != -1 || eq.search("\\-") != -1 && eq.search("\\^") == -1 )
+		return 1;
+	else if( eq.search("\\l\\n") != -1 )
+		return 3;
+	else if( eq.search("\\e\\^") != -1 )
+		return 4;
+	else
+		return 2;
+}
+
+function getTypeOneResult( eq, values )
+{
+	var sum = 0;
+	var coefs = {};
 	
-	var res = getResult(eq, values);
-	document.getElementById("resultado").innerHTML = res;
+	for( var key in values )
+	{
+		var regexp = new RegExp( "(^|\\+|\\-)([-+]?[0-9]*\\.?[0-9]+)" + key );
+		var res = regexp.exec(eq);
+		if( res[2] == '' ) res[2] = 1;
+		coefs[key] = parseFloat( ('' + res[1] ) + ( '' + res[2] ) );
+	}
+	
+	for( var key in coefs )
+		sum += (Math.pow(coefs[key], 2))*(Math.pow(values[key]['i'],2));
+	
+	return Math.sqrt(sum);
+}
+
+function getTypeThreeResult( eq, values )
+{
+	var regex = new RegExp("^(.*?)\\*ln");
+	var a = regex.exec(eq);
+	a = a == '' ? 1 : parseFloat(a[1]);
+	var regex = new RegExp("\\*ln(.*?)$");
+	var varname = regex.exec(eq);
+	varname = varname[1];
+	return a*(values[varname]['i']/values[varname]['m']);
+}
+
+function getTypeFourResult( eq, values )
+{
+	var regex = new RegExp("\\*e\\^(.*?)$");
+	var varname = regex.exec(eq);
+	varname = varname[1];
+	var regex = new RegExp("^(.*?)\\*e\\^[a-zA-Z]$");
+	var a = regex.exec(eq);
+	a = a == '' ? 1 : parseFloat(a[1]);
+	return a*(Math.pow(Math.E, values[varname]))*values[varname]['i'];
+}
+
+function getEquation()
+{
+	var eq = document.getElementById("eq").value.replace(" ","").split("=");
+	return eq.length == 1 ? [ replacePowers(eq[0]), '' ] : [ replacePowers(eq[1]), eq[0] ];
+}
+
+function showResult( varname, result )
+{
+	document.getElementById("resultado").innerHTML = varname != '' ? varname + ' = ' + result : result;
+	return true;
 }
 
 function getResult( eq, values )
 {
+	var choice = document.getElementById("simple").checked;
+	return choice ? getSimpleResult( eq, values ) : getComplexResult( eq, values );
+}
+
+function calculate()
+{
+	var values = getVars();
+	var eq = getEquation();
+	
+	showResult( eq[1], getResult(eq[0], values) );
+}
+
+function getComplexResult( eq, values )
+{
+	var type = getEquationType( eq );
+	var avg = calculateAverage( eq, values );
+	var result = avg + ' +- ';
+	if( type == 1 ) result += getTypeOneResult( eq, values );
+	else if( type == 2 ) result += getTypeTwoResult( eq, values );
+	else if( type == 3 ) result += getTypeThreeResult( eq, values );
+	else if( type == 4 ) result += getTypeFourResult( eq, values );
+	
+	return result;
+}
+
+function getSimpleResult( eq, values )
+{
 	var eqV = eq.split("/");
 	if( eqV.length == 1 )
 	{
-	// great!! no division!!
 		var max = eqV[0];
 		var min = eqV[0];
 	
@@ -85,30 +215,39 @@ function getResult( eq, values )
 	}
 
 	incerteza = eval( "(" + max + ") - (" + min + ")" ) / ( 2 * Math.sqrt(3) ); // calculate
+	alert( incerteza );
 	incerteza = formatToOneSignificant( incerteza );
 	
 	
-	var modulo = eq;
-
-	for( var key in values )
-		modulo = modulo.replace( key, values[key]['m'] );
-
-	modulo = eval( modulo );
+	var modulo = calculateAverage( eq, values );
+	
 	modulo = formatAccordingToErrorRange( modulo, incerteza );
 	return modulo + "  +-  " + incerteza;
 }
 
+function calculateAverage( eq, values )
+{
+	var modulo = eq;
+	modulo = replacePowers( modulo, values );
+	
+	for( var key in values )
+		modulo = modulo.replace( key, values[key]['m'] );
+
+	return eval( modulo );
+}
+
 function formatToOneSignificant( incerteza )
 {
-	incerteza = incerteza.toPrecision(1) + ''; // parse to string, with precision
-	incerteza = eval(incerteza.replace("e+", "*10^").replace("e-","*10^(-1)*")); 
+	//incerteza = incerteza.toPrecision(1) + ''; // parse to string, with precision
+	//incerteza = eval(incerteza.replace("e+", "*10^").replace("e-","*10^(-1)*")); 
 	return incerteza;
 }
 
 function formatAccordingToErrorRange( average, error_range )
 {
 	var digits = getDigitsCount( error_range );
-	return digits == 0 ? Math.round( parseFloat(average) ) : average.toPrecision(digits);
+	//return digits == 0 ? Math.round( parseFloat(average) ) : average.toPrecision(digits);
+	return average;
 }
 	 
 function getDigitsCount( incerteza )
