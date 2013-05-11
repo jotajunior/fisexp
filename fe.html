@@ -180,6 +180,8 @@ function getComplexResult( eq, values )
 
 function getSimpleResult( eq, values )
 {
+	eq = replacePowers(eq, values);
+
 	var eqV = eq.split("/");
 	if( eqV.length == 1 )
 	{
@@ -210,12 +212,13 @@ function getSimpleResult( eq, values )
 		
 			min_down = min_down.replace( key, getMin( values[key] ) );
 		}
+
 		max = eval( "(" + max_up + ") / (" + min_down + ")" );
 		min = eval( "(" + min_up + ") / (" + max_down + ")" );
 	}
 
 	incerteza = eval( "(" + max + ") - (" + min + ")" ) / ( 2 * Math.sqrt(3) ); // calculate
-	alert( incerteza );
+
 	incerteza = formatToOneSignificant( incerteza );
 	
 	
